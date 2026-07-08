@@ -2,11 +2,11 @@
   "$schema": "https://developer.microsoft.com/json-schemas/fabric/gitIntegration/platformProperties/2.0.0/schema.json",
   "metadata": {
     "type": "Notebook",
-    "displayName": "02_silver_enrich",
+    "displayName": "02_silver_enrich(1)",
     "description": "New notebook"
   },
   "config": {
     "version": "2.0",
-    "logicalId": "96549a68-7ad5-91d0-4321-9bbf5ae84642"
+    "logicalId": "06af4ad3-a7a8-8d5f-47e8-c50b04bdaa7d"
   }
 }

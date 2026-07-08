@@ -8,14 +8,8 @@
 # META   },
 # META   "dependencies": {
 # META     "lakehouse": {
-# META       "default_lakehouse": "e87eaff5-ed7c-4955-a186-d62849879068",
 # META       "default_lakehouse_name": "stewart_title_claims",
-# META       "default_lakehouse_workspace_id": "014dbc16-1b53-47bf-a4f4-e72029021280",
-# META       "known_lakehouses": [
-# META         {
-# META           "id": "e87eaff5-ed7c-4955-a186-d62849879068"
-# META         }
-# META       ]
+# META       "default_lakehouse_workspace_id": "<FABRIC_WORKSPACE_ID>"
 # META     }
 # META   }
 # META }
@@ -146,22 +140,44 @@ print('✅ gold_claims_fraud_scored written and optimized')
 
 # CELL ********************
 
-# ── Trigger Foundry Multi-Agent for HIGH Risk Claims ──────────────────────
-# Uses Workspace Managed Identity — no credentials needed here
+# -- Trigger Foundry Multi-Agent for HIGH Risk Claims ------------------------
 
-# Add the repo root to sys.path so agents/ can be imported
+# Resolve repo root dynamically so `agents` imports work in local and Fabric runs.
 import sys
-sys.path.insert(0, '/lakehouse/default/Files/stewart-title-fabric-demo')
+from pathlib import Path
+
+def _find_repo_root() -> Path | None:
+    candidates = [
+        Path.cwd(),
+        Path('/lakehouse/default/Files/stewart-title-fabric-demo'),
+    ]
+    for start in candidates:
+        if not start.exists():
+            continue
+        for current in [start.resolve(), *start.resolve().parents]:
+            if (current / 'agents' / '__init__.py').exists():
+                return current
+    return None
+
+repo_root = _find_repo_root()
+if not repo_root:
+    raise ModuleNotFoundError(
+        "Could not locate project root containing 'agents'. "
+        "Run this notebook from the stewart-title-fabric-demo workspace."
+    )
+
+if str(repo_root) not in sys.path:
+    sys.path.insert(0, str(repo_root))
 
 from agents.trigger import run_pending_investigations
 
 run_pending_investigations(
     spark=spark,
-    dry_run=False   # Set True to skip Foundry calls during notebook testing
+    dry_run=False  # Set True to skip Foundry calls during notebook testing
 )
 
-print('\n✅ Investigation reports written to gold_investigation_audit_log')
-print('   Run 04_validate_pipeline.ipynb to confirm all checks pass.')
+print('\nDone: investigation reports written to gold_investigation_audit_log')
+print('Run 04_validate_pipeline.ipynb to confirm all checks pass.')
 
 # METADATA ********************
 
