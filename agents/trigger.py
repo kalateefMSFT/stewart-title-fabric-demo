@@ -28,6 +28,12 @@ import sys
 from datetime import datetime
 from pathlib import Path
 
+# When executed as `python agents/trigger.py`, Python only adds `agents/` to
+# sys.path. Insert the repo root so `from agents.*` imports resolve correctly.
+REPO_ROOT = Path(__file__).resolve().parent.parent
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
+
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 
