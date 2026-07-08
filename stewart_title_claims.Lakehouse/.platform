@@ -1,0 +1,11 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/gitIntegration/platformProperties/2.0.0/schema.json",
+  "metadata": {
+    "type": "Lakehouse",
+    "displayName": "stewart_title_claims"
+  },
+  "config": {
+    "version": "2.0",
+    "logicalId": "49879068-d628-a186-4955-ed7ce87eaff5"
+  }
+}

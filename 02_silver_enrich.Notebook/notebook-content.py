@@ -1,0 +1,102 @@
+# Fabric notebook source
+
+# METADATA ********************
+
+# META {
+# META   "kernel_info": {
+# META     "name": "synapse_pyspark"
+# META   },
+# META   "dependencies": {
+# META     "lakehouse": {
+# META       "default_lakehouse": "e87eaff5-ed7c-4955-a186-d62849879068",
+# META       "default_lakehouse_name": "stewart_title_claims",
+# META       "default_lakehouse_workspace_id": "014dbc16-1b53-47bf-a4f4-e72029021280",
+# META       "known_lakehouses": [
+# META         {
+# META           "id": "e87eaff5-ed7c-4955-a186-d62849879068"
+# META         }
+# META       ]
+# META     }
+# META   }
+# META }
+
+# MARKDOWN ********************
+
+# # 02 — Silver Enrichment
+# **Purpose:** Apply feature engineering to Bronze claims data.
+# 
+# **Key transformations:**
+# - Claim velocity window (trailing 24-month count per claimant)
+# - Recency bucketing for fast filter queries
+# - Property spike flag
+# - High-value claim flag
+# 
+# **Output:** `silver_claims_enriched`
+
+# CELL ********************
+
+from pyspark.sql import SparkSession, functions as F
+from pyspark.sql.window import Window
+
+spark = SparkSession.builder.getOrCreate()
+spark.conf.set('spark.sql.shuffle.partitions', '8')
+print('✅ Silver enrichment starting')
+
+# METADATA ********************
+
+# META {
+# META   "language": "python",
+# META   "language_group": "synapse_pyspark"
+# META }
+
+# CELL ********************
+
+# ── Read Bronze ───────────────────────────────────────────────────────────
+claims = spark.table('bronze_claims_raw').withColumn(
+    'filed_date', F.to_date(F.col('filed_date'))
+)
+
+# ── Claim velocity: count per claimant in trailing 720 days ──────────────
+velocity_window = (
+    Window.partitionBy('claimant_id')
+    .orderBy(F.col('filed_date').cast('long'))
+    .rangeBetween(-720 * 86400, 0)
+)
+
+silver = (
+    claims
+    .withColumn('claim_velocity_24mo', F.count('claim_id').over(velocity_window))
+    .withColumn('is_high_value',       F.col('claim_amount') > 100_000)
+    .withColumn('property_spike',      F.col('value_pct_change') > 20.0)
+    .withColumn('days_since_filed',    F.datediff(F.current_date(), F.col('filed_date')))
+    .withColumn(
+        'recency_bucket',
+        F.when(F.col('days_since_filed') <= 30,  'LAST_30D')
+         .when(F.col('days_since_filed') <= 90,  'LAST_90D')
+         .when(F.col('days_since_filed') <= 365, 'LAST_YEAR')
+         .otherwise('OLDER')
+    )
+)
+
+(
+    silver
+    .write.format('delta')
+    .mode('overwrite')
+    .option('overwriteSchema', 'true')
+    .saveAsTable('silver_claims_enriched')
+)
+
+count = spark.table('silver_claims_enriched').count()
+print(f'✅ silver_claims_enriched: {count:,} rows')
+
+# Velocity distribution
+silver.groupBy('claim_velocity_24mo').count().orderBy('claim_velocity_24mo').show(10)
+
+print('\n✅ Silver enrichment complete. Run 03_gold_fraud_score.ipynb next.')
+
+# METADATA ********************
+
+# META {
+# META   "language": "python",
+# META   "language_group": "synapse_pyspark"
+# META }
