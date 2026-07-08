@@ -1,0 +1,268 @@
+{
+  "_comment": "Machine-readable specification for the Stewart Title Claims Intelligence Power BI report. Use this as a build guide in Power BI Desktop. All table references assume Direct Lake connection to the stewart_title_claims Fabric Lakehouse.",
+
+  "report_name": "StewartTitle_Claims",
+  "target_workspace": "StewartTitle-ClaimsIntelligence",
+  "connection_mode": "DirectLake",
+  "lakehouse": "stewart_title_claims",
+
+  "tables": [
+    {
+      "name": "gold_claims_fraud_scored",
+      "source": "lakehouse_table",
+      "primary_key": "claim_id",
+      "key_columns": [
+        "claim_id", "claimant_id", "property_id", "state",
+        "claim_type", "claim_amount", "claim_status", "filed_date",
+        "resolved_date", "assigned_investigator", "recency_bucket",
+        "days_since_filed", "fraud_risk_score", "risk_tier", "primary_alert",
+        "sig_velocity", "sig_id_unverified", "sig_property_spike",
+        "sig_high_value", "sig_new_account", "claim_velocity_24mo",
+        "id_verified", "value_pct_change", "has_lien", "account_age_days",
+        "is_confirmed_fraud", "fraud_label", "scored_at"
+      ]
+    },
+    {
+      "name": "gold_investigation_audit_log",
+      "source": "lakehouse_table",
+      "primary_key": "claim_id",
+      "key_columns": [
+        "claim_id", "claim_amount", "original_fraud_score",
+        "composite_fraud_probability", "recommended_action",
+        "human_review_required", "identity_status", "property_status",
+        "pattern_status", "compliance_status", "sar_required",
+        "investigated_at", "model_version"
+      ]
+    }
+  ],
+
+  "relationships": [
+    {
+      "from_table": "gold_investigation_audit_log",
+      "from_column": "claim_id",
+      "to_table": "gold_claims_fraud_scored",
+      "to_column": "claim_id",
+      "cardinality": "many-to-one",
+      "cross_filter": "single"
+    }
+  ],
+
+  "measures": [
+    {
+      "table": "gold_claims_fraud_scored",
+      "name": "Open HIGH Risk Count",
+      "dax": "CALCULATE(COUNTROWS(gold_claims_fraud_scored), gold_claims_fraud_scored[risk_tier] = \"HIGH\", gold_claims_fraud_scored[claim_status] IN {\"OPEN\", \"UNDER_REVIEW\"})",
+      "format_string": "#,0",
+      "display_folder": "KPIs"
+    },
+    {
+      "table": "gold_claims_fraud_scored",
+      "name": "High Risk Exposure ($)",
+      "dax": "CALCULATE(SUM(gold_claims_fraud_scored[claim_amount]), gold_claims_fraud_scored[risk_tier] = \"HIGH\", gold_claims_fraud_scored[claim_status] IN {\"OPEN\", \"UNDER_REVIEW\"})",
+      "format_string": "$#,0",
+      "display_folder": "KPIs"
+    },
+    {
+      "table": "gold_claims_fraud_scored",
+      "name": "Avg Fraud Score (HIGH)",
+      "dax": "CALCULATE(AVERAGE(gold_claims_fraud_scored[fraud_risk_score]), gold_claims_fraud_scored[risk_tier] = \"HIGH\")",
+      "format_string": "0.000",
+      "display_folder": "KPIs"
+    },
+    {
+      "table": "gold_claims_fraud_scored",
+      "name": "New Alerts (30D)",
+      "dax": "CALCULATE(COUNTROWS(gold_claims_fraud_scored), gold_claims_fraud_scored[primary_alert] <> \"NONE\", gold_claims_fraud_scored[recency_bucket] = \"LAST_30D\")",
+      "format_string": "#,0",
+      "display_folder": "KPIs"
+    },
+    {
+      "table": "gold_claims_fraud_scored",
+      "name": "Avg Days Open (HIGH)",
+      "dax": "CALCULATE(AVERAGE(gold_claims_fraud_scored[days_since_filed]), gold_claims_fraud_scored[risk_tier] = \"HIGH\", gold_claims_fraud_scored[claim_status] = \"OPEN\")",
+      "format_string": "#,0 \"days\"",
+      "display_folder": "KPIs"
+    },
+    {
+      "table": "gold_investigation_audit_log",
+      "name": "SAR Required Count",
+      "dax": "CALCULATE(COUNTROWS(gold_investigation_audit_log), gold_investigation_audit_log[sar_required] = TRUE())",
+      "format_string": "#,0",
+      "display_folder": "Compliance"
+    },
+    {
+      "table": "gold_investigation_audit_log",
+      "name": "Payout Hold Count",
+      "dax": "CALCULATE(COUNTROWS(gold_investigation_audit_log), gold_investigation_audit_log[recommended_action] = \"PLACE_PAYOUT_HOLD\")",
+      "format_string": "#,0",
+      "display_folder": "Compliance"
+    }
+  ],
+
+  "theme": {
+    "name": "StewartTitle",
+    "dataColors": ["#006341", "#C4963A", "#0F4C81", "#6B21A8", "#0891B2", "#DC2626", "#D97706", "#16A34A"],
+    "background": "#FFFFFF",
+    "foreground": "#1A2B1F",
+    "tableAccent": "#006341",
+    "font": "Calibri"
+  },
+
+  "pages": [
+    {
+      "name": "Executive Summary",
+      "visuals": [
+        {"type": "card", "title": "Open HIGH Risk Claims", "measure": "Open HIGH Risk Count", "accent_color": "#DC2626"},
+        {"type": "card", "title": "Total Exposure", "measure": "High Risk Exposure ($)", "accent_color": "#D97706"},
+        {"type": "card", "title": "Avg Risk Score", "measure": "Avg Fraud Score (HIGH)", "accent_color": "#006341"},
+        {"type": "card", "title": "New Alerts (30D)", "measure": "New Alerts (30D)", "accent_color": "#0F4C81"},
+        {
+          "type": "donut_chart",
+          "title": "Fraud Alert Types",
+          "legend": "primary_alert",
+          "values": "count of claim_id",
+          "filter": "primary_alert != 'NONE'"
+        },
+        {
+          "type": "line_chart",
+          "title": "Risk Trend by Month",
+          "x_axis": "filed_date (month hierarchy)",
+          "y_axis": "count of claim_id",
+          "legend": "risk_tier",
+          "sort": "filed_date ascending"
+        },
+        {
+          "type": "filled_map",
+          "title": "Exposure by State",
+          "location": "state",
+          "size": "High Risk Exposure ($)",
+          "tooltips": ["Open HIGH Risk Count", "Avg Fraud Score (HIGH)"]
+        }
+      ]
+    },
+    {
+      "name": "Investigator Queue",
+      "visuals": [
+        {
+          "type": "bar_chart",
+          "title": "Claims by Investigator",
+          "y_axis": "assigned_investigator",
+          "x_axis": "count of claim_id",
+          "legend": "risk_tier",
+          "sort": "count descending",
+          "filter": "claim_status IN ('OPEN','UNDER_REVIEW')"
+        },
+        {
+          "type": "table",
+          "title": "Open HIGH Risk Claims",
+          "columns": ["claim_id", "claim_amount", "fraud_risk_score", "primary_alert", "assigned_investigator", "filed_date", "days_since_filed"],
+          "default_sort": "fraud_risk_score descending",
+          "filter": "risk_tier = 'HIGH' AND claim_status IN ('OPEN','UNDER_REVIEW')",
+          "conditional_formatting": {
+            "fraud_risk_score": {"low_color": "#FFFFFF", "high_color": "#DC2626"},
+            "primary_alert": {"value_colors": {
+              "IDENTITY_VERIFICATION_REQUIRED": "#DC2626",
+              "ABNORMAL_CLAIM_VELOCITY": "#D97706",
+              "PROPERTY_VALUE_ANOMALY": "#D97706",
+              "MULTI_SIGNAL_FRAUD_RISK": "#DC2626",
+              "NONE": "#16A34A"
+            }}
+          }
+        },
+        {"type": "slicer", "field": "risk_tier", "style": "dropdown"},
+        {"type": "slicer", "field": "claim_status", "style": "dropdown"},
+        {"type": "slicer", "field": "recency_bucket", "style": "dropdown"},
+        {"type": "slicer", "field": "assigned_investigator", "style": "list"}
+      ]
+    },
+    {
+      "name": "Fraud Trend Analysis",
+      "visuals": [
+        {
+          "type": "stacked_column_chart",
+          "title": "Monthly Claims by Risk Tier",
+          "x_axis": "filed_date (month)",
+          "y_axis": "count of claim_id",
+          "legend": "risk_tier",
+          "color_map": {"HIGH": "#DC2626", "MEDIUM": "#D97706", "LOW": "#16A34A"}
+        },
+        {
+          "type": "stacked_bar_chart",
+          "title": "Avg Signal Strength by Alert Type",
+          "y_axis": "primary_alert",
+          "values": ["avg of sig_velocity", "avg of sig_id_unverified", "avg of sig_property_spike", "avg of sig_high_value"],
+          "filter": "primary_alert != 'NONE'"
+        },
+        {
+          "type": "column_chart",
+          "title": "Claim Velocity Distribution",
+          "x_axis": "claim_velocity_24mo",
+          "y_axis": "count of claim_id",
+          "note": "Spikes at 3+ are key fraud indicators"
+        },
+        {
+          "type": "matrix",
+          "title": "Exposure by State & Claim Type ($M)",
+          "rows": "state",
+          "columns": "claim_type",
+          "values": "sum of claim_amount / 1000000",
+          "format_string": "$#,0.0\"M\"",
+          "conditional_formatting": "background color by value"
+        }
+      ]
+    },
+    {
+      "name": "Claim Deep Dive",
+      "visuals": [
+        {
+          "type": "slicer",
+          "field": "claim_id",
+          "style": "dropdown",
+          "search_enabled": true,
+          "note": "Select a single claim to drill into all signals and agent findings"
+        },
+        {
+          "type": "multi_row_card",
+          "title": "Claim Details",
+          "fields": ["claim_id", "claim_amount", "fraud_risk_score", "risk_tier", "primary_alert", "claim_status", "assigned_investigator", "filed_date"]
+        },
+        {
+          "type": "radar_chart",
+          "title": "Fraud Signal Breakdown",
+          "category": "Signal",
+          "values": ["sig_velocity", "sig_id_unverified", "sig_property_spike", "sig_high_value", "sig_new_account"],
+          "note": "Each axis 0-1; outer = higher risk. Powered by gold_claims_fraud_scored sig_* columns."
+        },
+        {
+          "type": "table",
+          "title": "Investigation Audit (AI Foundry)",
+          "source_table": "gold_investigation_audit_log",
+          "columns": ["recommended_action", "composite_fraud_probability", "sar_required", "identity_status", "property_status", "pattern_status", "compliance_status", "investigated_at"],
+          "conditional_formatting": {
+            "recommended_action": {"value_colors": {
+              "PLACE_PAYOUT_HOLD": "#DC2626",
+              "ESCALATE_TO_SIU": "#D97706",
+              "REQUEST_DOCUMENTATION": "#0F4C81",
+              "STANDARD_REVIEW": "#64748B",
+              "CLEAR_FOR_PAYMENT": "#16A34A"
+            }}
+          }
+        }
+      ]
+    }
+  ],
+
+  "row_level_security": {
+    "role_name": "Investigator",
+    "table": "gold_claims_fraud_scored",
+    "dax_filter": "[assigned_investigator] = USERPRINCIPALNAME()",
+    "note": "Apply before publishing for multi-investigator production use"
+  },
+
+  "alert_configuration": {
+    "visual": "Open HIGH Risk Count card (Executive Summary page)",
+    "condition": "value is above 0",
+    "frequency": "at most once per hour",
+    "notification": "email"
+  }
+}
