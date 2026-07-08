@@ -2,11 +2,11 @@
   "$schema": "https://developer.microsoft.com/json-schemas/fabric/gitIntegration/platformProperties/2.0.0/schema.json",
   "metadata": {
     "type": "Notebook",
-    "displayName": "03_gold_fraud_score",
+    "displayName": "04_validate_pipeline(1)",
     "description": "New notebook"
   },
   "config": {
     "version": "2.0",
-    "logicalId": "ca00a0fb-33c9-a852-4c37-71b22b98494a"
+    "logicalId": "4474bcee-b37a-823b-4ef9-1981394f5f33"
   }
 }

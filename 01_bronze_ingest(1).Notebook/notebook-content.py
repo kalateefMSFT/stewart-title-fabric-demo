@@ -3,19 +3,10 @@
 # METADATA ********************
 
 # META {
-# META   "kernel_info": {
-# META     "name": "synapse_pyspark"
-# META   },
 # META   "dependencies": {
 # META     "lakehouse": {
-# META       "default_lakehouse": "e87eaff5-ed7c-4955-a186-d62849879068",
 # META       "default_lakehouse_name": "stewart_title_claims",
-# META       "default_lakehouse_workspace_id": "014dbc16-1b53-47bf-a4f4-e72029021280",
-# META       "known_lakehouses": [
-# META         {
-# META           "id": "e87eaff5-ed7c-4955-a186-d62849879068"
-# META         }
-# META       ]
+# META       "default_lakehouse_workspace_id": "<FABRIC_WORKSPACE_ID>"
 # META     }
 # META   }
 # META }
@@ -30,6 +21,30 @@
 # - An ADF pipeline landing CSVs/Parquet into `Files/landing/`, then read with `spark.read`
 # 
 # **Output tables:** `bronze_claims_raw`, `bronze_claimants`, `bronze_properties`
+
+# CELL ********************
+
+# Resolve repo root dynamically so local and Fabric runs can import project packages.
+import sys
+from pathlib import Path
+
+def _find_repo_root() -> Path | None:
+    candidates = [
+        Path.cwd(),
+        Path('/lakehouse/default/Files/stewart-title-fabric-demo'),
+    ]
+    for start in candidates:
+        if not start.exists():
+            continue
+        for current in [start.resolve(), *start.resolve().parents]:
+            if (current / 'agents' / '__init__.py').exists():
+                return current
+    return None
+
+repo_root = _find_repo_root()
+if repo_root and str(repo_root) not in sys.path:
+    sys.path.insert(0, str(repo_root))
+    print(f'Project root added to sys.path: {repo_root}')
 
 # CELL ********************
 
@@ -55,13 +70,6 @@ NUM_CLAIMANTS  = 400
 NUM_PROPERTIES = 800
 
 print('✅ Spark', spark.version, '— Bronze ingest starting')
-
-# METADATA ********************
-
-# META {
-# META   "language": "python",
-# META   "language_group": "synapse_pyspark"
-# META }
 
 # CELL ********************
 
@@ -145,13 +153,6 @@ claims_df = pd.DataFrame(claims)
 print(f'Generated: {len(claimants_df)} claimants | {len(props_df)} properties | {len(claims_df)} claims')
 print(f'Fraud distribution:\n{claims_df["fraud_label"].value_counts().to_string()}')
 
-# METADATA ********************
-
-# META {
-# META   "language": "python",
-# META   "language_group": "synapse_pyspark"
-# META }
-
 # CELL ********************
 
 # ── Write Bronze Delta tables ─────────────────────────────────────────────
@@ -171,10 +172,3 @@ for df, name in [
     print(f'✅ {name}: {count:,} rows')
 
 print('\n✅ Bronze ingest complete. Run 02_silver_enrich.ipynb next.')
-
-# METADATA ********************
-
-# META {
-# META   "language": "python",
-# META   "language_group": "synapse_pyspark"
-# META }

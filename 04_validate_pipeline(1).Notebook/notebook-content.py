@@ -19,6 +19,30 @@
 
 # CELL ********************
 
+# Resolve repo root dynamically so local and Fabric runs can import project packages.
+import sys
+from pathlib import Path
+
+def _find_repo_root() -> Path | None:
+    candidates = [
+        Path.cwd(),
+        Path('/lakehouse/default/Files/stewart-title-fabric-demo'),
+    ]
+    for start in candidates:
+        if not start.exists():
+            continue
+        for current in [start.resolve(), *start.resolve().parents]:
+            if (current / 'agents' / '__init__.py').exists():
+                return current
+    return None
+
+repo_root = _find_repo_root()
+if repo_root and str(repo_root) not in sys.path:
+    sys.path.insert(0, str(repo_root))
+    print(f'Project root added to sys.path: {repo_root}')
+
+# CELL ********************
+
 from pyspark.sql import SparkSession, functions as F
 
 spark = SparkSession.builder.getOrCreate()
