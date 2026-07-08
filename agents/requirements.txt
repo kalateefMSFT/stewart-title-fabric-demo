@@ -1,0 +1,11 @@
+# Azure AI Foundry SDK
+azure-ai-projects>=1.0.0b9
+azure-identity>=1.17.0
+
+# Data validation
+pydantic>=2.7.0
+
+# Already available in Fabric notebooks (listed for local dev clarity)
+# pyspark>=3.5.0   # provided by Fabric runtime
+# pandas>=2.0.0    # provided by Fabric runtime
+# numpy>=1.26.0    # provided by Fabric runtime

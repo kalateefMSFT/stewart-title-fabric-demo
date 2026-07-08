@@ -1,0 +1,60 @@
+name: Validate Demo Repo
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+jobs:
+  lint-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: pip install pydantic azure-identity ruff
+
+      - name: Lint (ruff)
+        run: ruff check agents/ scripts/ --ignore E501
+
+      - name: Validate Pydantic models
+        run: python -c "
+from agents.models import ClaimInput, RiskTier
+c = ClaimInput(
+    claim_id='CLM-2024-9999', claimant_id='CLM-ID-10001',
+    property_id='PROP-20001', claim_amount=150000.0, fraud_risk_score=0.85,
+    risk_tier=RiskTier.HIGH, primary_alert='MULTI_SIGNAL_FRAUD_RISK',
+    state='TX', claim_type='WIRE_FRAUD', id_verified=False,
+    value_pct_change=28.5, claim_velocity_24mo=3, has_lien=True,
+    account_age_days=120, assigned_investigator='J.Rivera'
+)
+print('ClaimInput OK:', c.claim_id)
+"
+
+      - name: Validate agent configs
+        run: |
+          python -c "
+import json
+from pathlib import Path
+cfg = json.loads((Path('config') / 'data_agent_config.json').read_text())
+assert cfg['system_prompt'], 'system_prompt empty'
+assert len(cfg['example_queries']) >= 5, 'need at least 5 example queries'
+print(f'Config OK: {len(cfg[\"example_queries\"])} example queries')
+"
+
+      - name: Validate notebook structure
+        run: |
+          python -c "
+import json
+from pathlib import Path
+for nb in sorted(Path('notebooks').glob('*.ipynb')):
+    data = json.loads(nb.read_text())
+    assert data['nbformat'] == 4
+    print(f'  OK: {nb.name} ({len(data[\"cells\"])} cells)')
+"

@@ -1,0 +1,15 @@
+# Secrets - NEVER commit these
+config/settings.env
+config/agent_ids.json
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+*.egg-info/
+
+# Notebooks checkpoints
+.ipynb_checkpoints/
+
+# OS
+.DS_Store
