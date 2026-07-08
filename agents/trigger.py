@@ -32,6 +32,16 @@ logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 
 
+def _parse_float_setting(settings: dict[str, str], key: str, default: str) -> float:
+    """Parse numeric settings safely, tolerating inline comments in .env values."""
+    raw = settings.get(key, default)
+    # Accept values like "50000    # comment" by removing trailing inline comments.
+    cleaned = raw.split("#", 1)[0].strip()
+    if not cleaned:
+        cleaned = default
+    return float(cleaned)
+
+
 def _load_settings() -> dict[str, str]:
     env_path = Path(__file__).parent.parent / "config" / "settings.env"
     settings: dict[str, str] = {}
@@ -94,8 +104,8 @@ def run_pending_investigations(spark=None, dry_run: bool = False):
         dry_run: If True, fetch claims but skip Foundry calls (for testing)
     """
     settings = _load_settings()
-    min_score  = float(settings.get("FRAUD_HIGH_THRESHOLD",       "0.75"))
-    min_amount = float(settings.get("FRAUD_ALERT_AMOUNT_MIN",     "50000"))
+    min_score = _parse_float_setting(settings, "FRAUD_HIGH_THRESHOLD", "0.75")
+    min_amount = _parse_float_setting(settings, "FRAUD_ALERT_AMOUNT_MIN", "50000")
 
     # Import here so Fabric can call this without the full agent stack if dry_run
     from agents.models import ClaimInput, RiskTier
