@@ -30,6 +30,7 @@ from agents.sub_agents.property_agent      import SYSTEM_PROMPT as PROPERTY_PROM
 from agents.sub_agents.claims_pattern_agent import SYSTEM_PROMPT as PATTERN_PROMPT
 from agents.sub_agents.compliance_agent    import SYSTEM_PROMPT as COMPLIANCE_PROMPT
 from agents.orchestrator                   import ORCHESTRATOR_SYNTHESIS_PROMPT
+from azure.ai.projects.models import PromptAgentDefinition
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 logger = logging.getLogger(__name__)
@@ -125,11 +126,15 @@ def provision(model_deployment: str | None = None) -> dict[str, str]:
     for defn in AGENT_DEFINITIONS:
         logger.info("Creating agent: %s", defn["name"])
         try:
-            agent = client.agents.create_agent(
+            agent_definition = PromptAgentDefinition(
+                kind="prompt",
                 model=model,
-                name=defn["name"],
-                description=defn["description"],
                 instructions=defn["prompt"],
+            )
+            agent = client.agents.create(
+                name=defn["name"],
+                definition=agent_definition,
+                description=defn["description"],
             )
             agent_ids[defn["key"]] = agent.id
             env_updates[defn["env_key"]] = agent.id

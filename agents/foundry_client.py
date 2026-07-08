@@ -17,8 +17,18 @@ import logging
 from functools import lru_cache
 from typing import Optional
 
+from azure.core.credentials import AccessToken, TokenCredential
 from azure.ai.projects import AIProjectClient
-from azure.identity import DefaultAzureCredential, ManagedIdentityCredential
+from azure.identity import (
+    AzureCliCredential,
+    AzureDeveloperCliCredential,
+    AzurePowerShellCredential,
+    ChainedTokenCredential,
+    DefaultAzureCredential,
+    ManagedIdentityCredential,
+    SharedTokenCacheCredential,
+    VisualStudioCodeCredential,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -37,6 +47,46 @@ def _load_env() -> dict[str, str]:
     return settings
 
 
+class _FallbackCredential(TokenCredential):
+    """Try managed identity first, then fall back to developer credentials."""
+
+    def __init__(self, primary: TokenCredential, fallback: TokenCredential):
+        self._primary = primary
+        self._fallback = fallback
+
+    def get_token(self, *scopes, **kwargs) -> AccessToken:
+        try:
+            return self._primary.get_token(*scopes, **kwargs)
+        except Exception as primary_error:
+            logger.warning(
+                "Managed identity token acquisition failed; falling back to DefaultAzureCredential: %s",
+                primary_error,
+            )
+            return self._fallback.get_token(*scopes, **kwargs)
+
+    def get_token_info(self, *scopes, **kwargs):
+        try:
+            return self._primary.get_token_info(*scopes, **kwargs)
+        except Exception as primary_error:
+            logger.warning(
+                "Managed identity token acquisition failed; falling back to DefaultAzureCredential: %s",
+                primary_error,
+            )
+            return self._fallback.get_token_info(*scopes, **kwargs)
+
+
+def _build_developer_credential() -> TokenCredential:
+    """Build a broad local-dev credential chain."""
+    return ChainedTokenCredential(
+        AzureCliCredential(),
+        AzureDeveloperCliCredential(),
+        AzurePowerShellCredential(),
+        VisualStudioCodeCredential(),
+        SharedTokenCacheCredential(),
+        DefaultAzureCredential(),
+    )
+
+
 def _get_credential():
     """
     Return the best available credential.
@@ -51,16 +101,23 @@ def _get_credential():
     # Detect if we're running inside Azure (Fabric / ACI / App Service)
     in_azure = os.environ.get("MSI_ENDPOINT") or os.environ.get("IDENTITY_ENDPOINT")
 
+    force_local = os.environ.get("AZURE_FOUNDRY_FORCE_LOCAL_CREDENTIALS", "").lower() in {"1", "true", "yes"}
+
+    if force_local:
+        logger.info("AZURE_FOUNDRY_FORCE_LOCAL_CREDENTIALS set — using developer credential chain")
+        return _build_developer_credential()
+
     if in_azure:
         logger.info("Running in Azure — using ManagedIdentityCredential")
-        return (
+        managed_identity = (
             ManagedIdentityCredential(client_id=mi_client_id)
             if mi_client_id
             else ManagedIdentityCredential()
         )
+        return _FallbackCredential(managed_identity, _build_developer_credential())
 
-    logger.info("Running locally — using DefaultAzureCredential")
-    return DefaultAzureCredential()
+    logger.info("Running locally — using developer credential chain")
+    return _build_developer_credential()
 
 
 @lru_cache(maxsize=1)
