@@ -32,14 +32,14 @@
    - **Region:** `eastus2` (recommended — best model availability)
 4. Click **Create**
 
-### 1.2 Deploy GPT-4o
+### 1.2 Deploy model-router
 
 Inside the project:
 
 1. Navigate to **Models + endpoints → Deploy model**
-2. Select **gpt-4o** (latest available version)
-3. Deployment name: `gpt-4o-fraud`
-4. Tokens per minute: `80K` (sufficient for 4 parallel sub-agents)
+2. Select **model-router** (latest available version)
+3. Deployment name: `fraud-router`
+4. Tokens per minute: `150K` (sufficient for 4 parallel sub-agents)
 5. Click **Deploy** and wait ~2 minutes
 
 ### 1.3 Grant Fabric Managed Identity Access
