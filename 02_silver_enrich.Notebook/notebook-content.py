@@ -3,11 +3,21 @@
 # METADATA ********************
 
 # META {
+# META   "kernel_info": {
+# META     "name": "synapse_pyspark"
+# META   },
 # META   "dependencies": {
 # META     "lakehouse": {
+# META       "default_lakehouse": "e87eaff5-ed7c-4955-a186-d62849879068",
 # META       "default_lakehouse_name": "stewart_title_claims",
-# META       "default_lakehouse_workspace_id": "<FABRIC_WORKSPACE_ID>"
-# META     }
+# META       "default_lakehouse_workspace_id": "014dbc16-1b53-47bf-a4f4-e72029021280",
+# META       "known_lakehouses": [
+# META         {
+# META           "id": "e87eaff5-ed7c-4955-a186-d62849879068"
+# META         }
+# META       ]
+# META     },
+# META     "warehouse": {}
 # META   }
 # META }
 
@@ -48,6 +58,13 @@ if repo_root and str(repo_root) not in sys.path:
     sys.path.insert(0, str(repo_root))
     print(f'Project root added to sys.path: {repo_root}')
 
+# METADATA ********************
+
+# META {
+# META   "language": "python",
+# META   "language_group": "synapse_pyspark"
+# META }
+
 # CELL ********************
 
 from pyspark.sql import SparkSession, functions as F
@@ -56,6 +73,13 @@ from pyspark.sql.window import Window
 spark = SparkSession.builder.getOrCreate()
 spark.conf.set('spark.sql.shuffle.partitions', '8')
 print('✅ Silver enrichment starting')
+
+# METADATA ********************
+
+# META {
+# META   "language": "python",
+# META   "language_group": "synapse_pyspark"
+# META }
 
 # CELL ********************
 
@@ -101,3 +125,10 @@ print(f'✅ silver_claims_enriched: {count:,} rows')
 silver.groupBy('claim_velocity_24mo').count().orderBy('claim_velocity_24mo').show(10)
 
 print('\n✅ Silver enrichment complete. Run 03_gold_fraud_score.ipynb next.')
+
+# METADATA ********************
+
+# META {
+# META   "language": "python",
+# META   "language_group": "synapse_pyspark"
+# META }

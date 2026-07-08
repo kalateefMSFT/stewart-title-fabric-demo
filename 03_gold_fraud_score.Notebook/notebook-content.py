@@ -8,8 +8,14 @@
 # META   },
 # META   "dependencies": {
 # META     "lakehouse": {
+# META       "default_lakehouse": "e87eaff5-ed7c-4955-a186-d62849879068",
 # META       "default_lakehouse_name": "stewart_title_claims",
-# META       "default_lakehouse_workspace_id": "<FABRIC_WORKSPACE_ID>"
+# META       "default_lakehouse_workspace_id": "014dbc16-1b53-47bf-a4f4-e72029021280",
+# META       "known_lakehouses": [
+# META         {
+# META           "id": "e87eaff5-ed7c-4955-a186-d62849879068"
+# META         }
+# META       ]
 # META     }
 # META   }
 # META }
@@ -26,15 +32,24 @@
 
 # CELL ********************
 
+%pip install -r /lakehouse/default/Files/stewart-title-fabric-demo/agents/requirements.txt
+
 from pyspark.sql import SparkSession, functions as F
 import os
 
 spark = SparkSession.builder.getOrCreate()
 
+def _parse_env_float(name: str, default: str) -> float:
+    raw = os.environ.get(name, default)
+    cleaned = raw.split('#', 1)[0].strip()
+    if not cleaned:
+        cleaned = default
+    return float(cleaned)
+
 # Tunable thresholds — match config/settings.env
-HIGH_THRESHOLD   = float(os.environ.get('FRAUD_HIGH_THRESHOLD',   '0.75'))
-MEDIUM_THRESHOLD = float(os.environ.get('FRAUD_MEDIUM_THRESHOLD', '0.45'))
-ALERT_AMOUNT_MIN = float(os.environ.get('FRAUD_ALERT_AMOUNT_MIN', '50000'))
+HIGH_THRESHOLD   = _parse_env_float('FRAUD_HIGH_THRESHOLD',   '0.75')
+MEDIUM_THRESHOLD = _parse_env_float('FRAUD_MEDIUM_THRESHOLD', '0.45')
+ALERT_AMOUNT_MIN = _parse_env_float('FRAUD_ALERT_AMOUNT_MIN', '50000')
 
 print(f'Thresholds — HIGH: {HIGH_THRESHOLD} | MEDIUM: {MEDIUM_THRESHOLD} | Min amount: ${ALERT_AMOUNT_MIN:,.0f}')
 

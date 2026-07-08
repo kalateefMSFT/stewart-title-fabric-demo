@@ -3,10 +3,19 @@
 # METADATA ********************
 
 # META {
+# META   "kernel_info": {
+# META     "name": "synapse_pyspark"
+# META   },
 # META   "dependencies": {
 # META     "lakehouse": {
+# META       "default_lakehouse": "e87eaff5-ed7c-4955-a186-d62849879068",
 # META       "default_lakehouse_name": "stewart_title_claims",
-# META       "default_lakehouse_workspace_id": "<FABRIC_WORKSPACE_ID>"
+# META       "default_lakehouse_workspace_id": "014dbc16-1b53-47bf-a4f4-e72029021280",
+# META       "known_lakehouses": [
+# META         {
+# META           "id": "e87eaff5-ed7c-4955-a186-d62849879068"
+# META         }
+# META       ]
 # META     }
 # META   }
 # META }
@@ -40,6 +49,13 @@ repo_root = _find_repo_root()
 if repo_root and str(repo_root) not in sys.path:
     sys.path.insert(0, str(repo_root))
     print(f'Project root added to sys.path: {repo_root}')
+
+# METADATA ********************
+
+# META {
+# META   "language": "python",
+# META   "language_group": "synapse_pyspark"
+# META }
 
 # CELL ********************
 
@@ -137,3 +153,10 @@ else:
     print('✅  ALL CHECKS PASSED — Demo ready!')
     print('   Next: Set up Fabric Data Agent (DEPLOYMENT.md Phase 4)')
 print('=' * 55)
+
+# METADATA ********************
+
+# META {
+# META   "language": "python",
+# META   "language_group": "synapse_pyspark"
+# META }
